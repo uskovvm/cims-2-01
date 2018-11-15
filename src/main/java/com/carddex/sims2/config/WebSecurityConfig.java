@@ -19,7 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.carddex.sims2.security.JwtAuthenticationEntryPoint;
 import com.carddex.sims2.security.JwtAuthorizationTokenFilter;
-import com.carddex.sims2.security.service.JwtUserDetailsService;
+import com.carddex.sims2.service.JwtUserDetailsService;
 
 @Configuration
 //@EnableWebSecurity
@@ -66,24 +66,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				// don't create session
 				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeRequests()
 				.antMatchers("core/api/**").permitAll()
+				.antMatchers("core/api/**/**").permitAll()
 				// Un-secure H2 Database
 				.antMatchers("/h2-console/**/**").permitAll().anyRequest().authenticated();
-
-		// httpSecurity.addFilterBefore(authenticationTokenFilter,
-		// UsernamePasswordAuthenticationFilter.class);
 
 		// disable page caching
 		httpSecurity.headers().frameOptions().sameOrigin() // required to set for H2 else H2 Console will be blank.
 				.cacheControl();
 	}
-
-	// @Override
-	// public void configure(WebSecurity web) throws Exception {
-	// AuthenticationTokenFilter will ignore the below paths
-
-	// web.ignoring().antMatchers("/**/**");
-
-	// }
 
 	// @Override
 	public void configure(WebSecurity web) throws Exception {
@@ -94,11 +84,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 		.ignoring().antMatchers(HttpMethod.POST, authenticationPath).and()
 		.ignoring().antMatchers(HttpMethod.GET, authenticationPath).and()
 		.ignoring().antMatchers(HttpMethod.GET, "core/api/modules").and()
+		.ignoring().antMatchers(HttpMethod.POST, "core/api/modules").and()
+		.ignoring().antMatchers(HttpMethod.GET, "core/api/modules/enabled").and()
 		.ignoring().antMatchers(HttpMethod.GET, "core/api/permission/**")
 
 		// allow anonymous resource requests
 		.and().ignoring()
 		.antMatchers(HttpMethod.GET, "/", "/*.html", "/**/**/**/**","/favicon.ico", "/**/*.html", "/**/*.css", "/**/*.js")
+		.antMatchers(HttpMethod.POST, "/", "/*.html", "/**/**/**/**","/favicon.ico", "/**/*.html", "/**/*.css", "/**/*.js")
 
 		// Un-secure H2 Database (for testing purposes, H2 console shouldn't be
 		// unprotected in production)

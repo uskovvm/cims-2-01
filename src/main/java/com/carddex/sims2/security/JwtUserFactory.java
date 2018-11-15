@@ -8,9 +8,9 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import com.carddex.sims2.model.security.Privilege;
-import com.carddex.sims2.model.security.Role;
-import com.carddex.sims2.model.security.User;
+import com.carddex.sims2.security.model.Privilege;
+import com.carddex.sims2.security.model.Role;
+import com.carddex.sims2.security.model.User;
 
 public final class JwtUserFactory {
 

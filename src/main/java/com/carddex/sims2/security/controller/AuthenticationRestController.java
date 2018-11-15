@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -27,16 +28,23 @@ import org.springframework.web.bind.annotation.RestController;
 import com.carddex.sims2.model.Module;
 import com.carddex.sims2.preferences.ResponseConstants;
 import com.carddex.sims2.rest.dto.DepartmentsResp;
+import com.carddex.sims2.rest.dto.PrivilegeResponse;
+import com.carddex.sims2.rest.dto.RoleDto;
+import com.carddex.sims2.rest.dto.StatusResponse;
 import com.carddex.sims2.rest.dto.ZonesResp;
+import com.carddex.sims2.rest.model.ModuleStatus;
 import com.carddex.sims2.security.JwtAuthenticationRequest;
 import com.carddex.sims2.security.JwtTokenUtil;
 import com.carddex.sims2.security.JwtUser;
 import com.carddex.sims2.security.SUser;
-import com.carddex.sims2.security.service.DeparmentService;
-import com.carddex.sims2.security.service.JwtAuthenticationResponse;
-import com.carddex.sims2.security.service.ModuleService;
-import com.carddex.sims2.security.service.UserAuthResponse;
-import com.carddex.sims2.security.service.ZoneService;
+import com.carddex.sims2.security.model.Role;
+import com.carddex.sims2.service.DeparmentService;
+import com.carddex.sims2.service.JwtAuthenticationResponse;
+import com.carddex.sims2.service.ModuleService;
+import com.carddex.sims2.service.PrivilegeService;
+import com.carddex.sims2.service.RoleService;
+import com.carddex.sims2.service.UserAuthResponse;
+import com.carddex.sims2.service.ZoneService;
 
 @RestController
 public class AuthenticationRestController {
@@ -53,26 +61,27 @@ public class AuthenticationRestController {
 	@Autowired
 	@Qualifier("jwtUserDetailsService")
 	private UserDetailsService userDetailsService;
-	
+
 	@Autowired
-	private ModuleService moduleService;
+	private PrivilegeService privilegeService;
+
+	@Autowired
+	private RoleService roleService;
 
 	@Autowired
 	private DeparmentService departmentService;
 
 	@Autowired
 	private ZoneService zoneService;
-	
 
-	
 	@RequestMapping(value = "${jwt.route.authentication.path}", method = RequestMethod.POST)
 	public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtAuthenticationRequest authenticationRequest)
 			throws AuthenticationException {
 
 		try {
-			
+
 			authenticate(authenticationRequest.getUsername(), authenticationRequest.getPassword());
-			
+
 		} catch (AuthenticationException e) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new UserAuthResponse(
 					ResponseConstants.RESPONSE_ERROR, ResponseConstants.RESPONSE_DESCRIPTION_ERROR));
@@ -85,6 +94,46 @@ public class AuthenticationRestController {
 		String token = jwtTokenUtil.generateToken(userDetails);
 
 		return ResponseEntity.ok(new UserAuthResponse(token, userDetails));
+	}
+
+	@RequestMapping(value = "/core/api/sys/user", method = RequestMethod.GET)
+	public ResponseEntity<?> getUserInfo(HttpServletRequest request) throws AuthenticationException {
+
+		try {
+
+			String token = request.getHeader(tokenHeader).substring(7);
+			String userName = jwtTokenUtil.getUsernameFromToken(token);
+
+			if (userName != null) {
+				SUser userDetails = (SUser) userDetailsService.loadUserByUsername(userName);
+				return ResponseEntity.ok(new UserAuthResponse(token, userDetails));
+			} else {
+				throw (new Exception());
+			}
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(new StatusResponse("error"));
+		}
+
+	}
+
+	@RequestMapping(value = "/core/api/logout", method = RequestMethod.GET)
+	public ResponseEntity<?> logout(HttpServletRequest request) throws AuthenticationException {
+
+		try {
+
+			String token = request.getHeader(tokenHeader).substring(7);
+			String userName = jwtTokenUtil.getUsernameFromToken(token);
+
+			if (userName != null) {
+				SUser userDetails = (SUser) userDetailsService.loadUserByUsername(userName);
+				return ResponseEntity.ok(new UserAuthResponse(token, userDetails));
+			} else {
+				throw (new Exception());
+			}
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(new StatusResponse("error"));
+		}
+
 	}
 
 	@RequestMapping(value = "${jwt.route.authentication.refresh}", method = RequestMethod.GET)
@@ -101,51 +150,64 @@ public class AuthenticationRestController {
 			return ResponseEntity.badRequest().body(null);
 		}
 	}
-	
-	@RequestMapping(value = "/core/api/modules", method = RequestMethod.GET)
-	@ResponseBody
-	public ResponseEntity<List<Module>> getModules() {
 
-		return ResponseEntity.ok(moduleService.loadAllModules());
+	@RequestMapping(value = "/core/api/authorized", method = RequestMethod.GET)
+	@ResponseBody
+	public ResponseEntity<Object> authorized(HttpServletRequest request) {
+		String authToken = request.getHeader(tokenHeader);
+		final String token = authToken.substring(7);
+
+		try {
+			if (jwtTokenUtil.getUsernameFromToken(token) != null) {
+				return ResponseEntity.ok(new StatusResponse("success"));
+			} else {
+				throw (new Exception());
+			}
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(new StatusResponse("error"));
+		}
+
+	}
+
+	@RequestMapping(value = "/core/api/permissions", method = RequestMethod.GET)
+	@ResponseBody
+	public ResponseEntity<Object> getPrivileges(HttpServletRequest request) {
+		List<PrivilegeResponse> list = privilegeService.getPrivilegeResponseList();
+		return ResponseEntity.ok(list);
+	}
+
+	@RequestMapping(value = "/core/api/roles", method = RequestMethod.GET)
+	@ResponseBody
+	public ResponseEntity<Object> getRoles(HttpServletRequest request) {
+
+		return ResponseEntity.ok(roleService.findAll());
+	}
+
+	@RequestMapping(value = "/core/api/roles/permissions", method = RequestMethod.POST)
+	public ResponseEntity<Object> setRolePermissions(@RequestBody RoleDto role) {
+
+		try {
+			roleService.setRolePermissions(role);
+			return ResponseEntity.ok(new StatusResponse("success"));
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(new StatusResponse("error"));
+		}
 	}
 
 	@RequestMapping(value = "personnel/api/departments", method = RequestMethod.GET)
 	@ResponseBody
 	public ResponseEntity<DepartmentsResp> getDepartments() {
-		
-		DepartmentsResp result = departmentService.loadAlldepartments();
-		return ResponseEntity.ok(result);
+
+		return ResponseEntity.ok(departmentService.loadAlldepartments());
 	}
 
 	@RequestMapping(value = "/zones/api/zones", method = RequestMethod.GET)
 	@ResponseBody
 	public ResponseEntity<ZonesResp> getZones() {
-		
+
 		ZonesResp result = zoneService.loadAll();
 		return ResponseEntity.ok(result);
 	}
-
-	@RequestMapping(value = "/core/api/permission/objects", method = RequestMethod.GET)
-	@ResponseBody
-	public ResponseEntity<List> getPermissionObjects(
-			@RequestParam(name = "userId", required = false, defaultValue = "0") Long userId,
-			@RequestParam(name = "roleId", required = false, defaultValue = "0") Long roleId,
-			@RequestParam(name = "id") Long id) {
-
-		List result = new ArrayList();
-		result.add(new Long(1));
-		result.add(new Long(2));
-		result.add(new Long(3));
-		result.add(new Long(4));
-		result.add(new Long(5));
-		result.add(new Long(6));
-		result.add(new Long(7));
-		result.add(new Long(8));
-		result.add(new Long(9));
-//
-		return ResponseEntity.status(HttpStatus.OK).body(result);
-	}
-
 
 	@ExceptionHandler({ AuthenticationException.class })
 	public ResponseEntity<String> handleAuthenticationException(AuthenticationException e) {
