@@ -1,6 +1,5 @@
 package com.carddex.sims2.security.controller;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -21,26 +19,21 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.carddex.sims2.model.Module;
 import com.carddex.sims2.preferences.ResponseConstants;
 import com.carddex.sims2.rest.dto.DepartmentsResp;
 import com.carddex.sims2.rest.dto.PrivilegeResponse;
 import com.carddex.sims2.rest.dto.RoleDto;
 import com.carddex.sims2.rest.dto.StatusResponse;
 import com.carddex.sims2.rest.dto.ZonesResp;
-import com.carddex.sims2.rest.model.ModuleStatus;
 import com.carddex.sims2.security.JwtAuthenticationRequest;
 import com.carddex.sims2.security.JwtTokenUtil;
 import com.carddex.sims2.security.JwtUser;
 import com.carddex.sims2.security.SUser;
-import com.carddex.sims2.security.model.Role;
 import com.carddex.sims2.service.DeparmentService;
 import com.carddex.sims2.service.JwtAuthenticationResponse;
-import com.carddex.sims2.service.ModuleService;
 import com.carddex.sims2.service.PrivilegeService;
 import com.carddex.sims2.service.RoleService;
 import com.carddex.sims2.service.UserAuthResponse;
